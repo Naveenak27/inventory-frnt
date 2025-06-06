@@ -12,7 +12,7 @@ const LoginPage = () => {
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      const response = await fetch('https://notes-eight-kappa.vercel.app/auth/login', {
+      const response = await fetch('https://note-n4cq.vercel.app/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

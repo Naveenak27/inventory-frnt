@@ -21,7 +21,7 @@ const NotesPage = () => {
   const fetchNotes = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('https://notes-eight-kappa.vercel.app/notes', {
+      const res = await fetch('https://note-n4cq.vercel.app/notes', {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       const data = await res.json();
@@ -40,8 +40,8 @@ const NotesPage = () => {
       const values = await form.validateFields();
       const token = localStorage.getItem('token');
       const url = currentNote 
-        ? `https://notes-eight-kappa.vercel.app/notes/${currentNote.id}`
-        : 'https://notes-eight-kappa.vercel.app/notes';
+        ? `https://note-n4cq.vercel.app/notes/${currentNote.id}`
+        : 'https://note-n4cq.vercel.app/notes';
       
       const res = await fetch(url, {
         method: currentNote ? 'PUT' : 'POST',
@@ -70,7 +70,7 @@ const NotesPage = () => {
     try {
       setSubmitting(true);
       const token = localStorage.getItem('token');
-      const res = await fetch(`https://notes-eight-kappa.vercel.app/notes/${id}`, {
+      const res = await fetch(`https://note-n4cq.vercel.app/notes/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` },
       });
