@@ -128,8 +128,8 @@ const NotesPage = () => {
               {note.content}
             </div>
             <small style={{ color: '#666' }}>
-              Last updated: {new Date(note.updated_at).toLocaleString()}
-            </small>
+  Last updated: {new Date(note.updatedAt).toLocaleString()}
+</small>
           </Card>
         ))}
       </Space>
