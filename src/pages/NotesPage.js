@@ -1,32 +1,52 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Button, Modal, Form, Input, message, Spin, Card, Space } from 'antd';
+import { Button, Modal, Form, Input, message, Spin, Table, InputNumber, Row, Col } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import AuthContext from '../pages/AuthContext';
 
 const { TextArea } = Input;
 
 const NotesPage = () => {
-  const [notes, setNotes] = useState([]);
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
-  const [currentNote, setCurrentNote] = useState(null);
+  const [currentItem, setCurrentItem] = useState(null);
   const [confirmVisible, setConfirmVisible] = useState(false);
-  const [noteToDelete, setNoteToDelete] = useState(null);
+  const [itemToDelete, setItemToDelete] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [form] = Form.useForm();
   const { user } = useContext(AuthContext);
 
-  useEffect(() => { fetchNotes(); }, []);
+  // Generate random SKU
+  const generateRandomSKU = () => {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = 'SKU-';
+    
+    // Generate 6 random characters
+    for (let i = 0; i < 6; i++) {
+      result += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    
+    // Check if this SKU already exists
+    const existingSKUs = items.map(item => item.sku);
+    if (existingSKUs.includes(result)) {
+      // If it exists, generate a new one recursively
+      return generateRandomSKU();
+    }
+    
+    return result;
+  };
 
-  const fetchNotes = async () => {
+  useEffect(() => { fetchItems(); }, []);
+
+  const fetchItems = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('https://note-n4cq.vercel.app/notes', {
+      const res = await fetch('https://ren-uncw.onrender.com/api/inventory', {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to fetch notes');
-      setNotes(data.notes);
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch inventory items');
+      setItems(data.items);
     } catch (error) {
       message.error(error.message);
     } finally {
@@ -39,12 +59,12 @@ const NotesPage = () => {
       setSubmitting(true);
       const values = await form.validateFields();
       const token = localStorage.getItem('token');
-      const url = currentNote 
-        ? `https://note-n4cq.vercel.app/notes/${currentNote.id}`
-        : 'https://note-n4cq.vercel.app/notes';
+      const url = currentItem 
+        ? `https://ren-kua5.onrender.com/api/inventory/${currentItem.id}`
+        : 'https://ren-kua5.onrender.com/api/inventory';
       
       const res = await fetch(url, {
-        method: currentNote ? 'PUT' : 'POST',
+        method: currentItem ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
@@ -54,11 +74,11 @@ const NotesPage = () => {
 
       if (!res.ok) throw new Error('Operation failed');
       
-      message.success(currentNote ? 'Note updated' : 'Note created');
+      message.success(currentItem ? 'Item updated successfully' : 'Item added successfully');
       setModalVisible(false);
       form.resetFields();
-      setCurrentNote(null);
-      fetchNotes();
+      setCurrentItem(null);
+      fetchItems();
     } catch (error) {
       message.error(error.message);
     } finally {
@@ -70,15 +90,15 @@ const NotesPage = () => {
     try {
       setSubmitting(true);
       const token = localStorage.getItem('token');
-      const res = await fetch(`https://note-n4cq.vercel.app/notes/${id}`, {
+      const res = await fetch(`https://ren-kua5.onrender.com/api/inventory/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` },
       });
       if (!res.ok) throw new Error('Delete failed');
-      message.success('Note deleted');
+      message.success('Item deleted successfully');
       setConfirmVisible(false);
-      setNoteToDelete(null);
-      fetchNotes();
+      setItemToDelete(null);
+      fetchItems();
     } catch (error) {
       message.error(error.message);
     } finally {
@@ -86,89 +106,314 @@ const NotesPage = () => {
     }
   };
 
-  const openModal = (note = null) => {
-    setCurrentNote(note);
+  const openModal = (item = null) => {
+    setCurrentItem(item);
     setModalVisible(true);
-    form.setFieldsValue({ title: note?.title || '', content: note?.content || '' });
+    
+    // Set form values
+    form.setFieldsValue({
+      name: item?.name || '',
+      description: item?.description || '',
+      quantity: item?.quantity || 0,
+      unit_price: item?.unit_price || 0,
+      category: item?.category || '',
+      supplier: item?.supplier || '',
+      min_stock_level: item?.min_stock_level || 0,
+      location: item?.location || '',
+      sku: item?.sku || generateRandomSKU() // Generate random SKU for new items
+    });
   };
+
+  const columns = [
+    {
+      title: 'SKU',
+      dataIndex: 'sku',
+      key: 'sku',
+      width: 120,
+    },
+    {
+      title: 'Name',
+      dataIndex: 'name',
+      key: 'name',
+      width: 180,
+      render: (text, record) => (
+        <div>
+          <strong>{text}</strong>
+          {record.description && <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>{record.description}</div>}
+        </div>
+      ),
+    },
+    {
+      title: 'Category',
+      dataIndex: 'category',
+      key: 'category',
+      width: 120,
+    },
+    {
+      title: 'Quantity',
+      dataIndex: 'quantity',
+      key: 'quantity',
+      width: 100,
+      align: 'center',
+    },
+    {
+      title: 'Unit Price',
+      dataIndex: 'unit_price',
+      key: 'unit_price',
+      width: 100,
+      align: 'right',
+      render: (price) => `$${(parseFloat(price) || 0).toFixed(2)}`,
+    },
+    {
+      title: 'Supplier',
+      dataIndex: 'supplier',
+      key: 'supplier',
+      width: 140,
+    },
+    {
+      title: 'Min Stock',
+      dataIndex: 'min_stock_level',
+      key: 'min_stock_level',
+      width: 100,
+      align: 'center',
+    },
+    {
+      title: 'Location',
+      dataIndex: 'location',
+      key: 'location',
+      width: 140,
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      width: 100,
+      fixed: 'right',
+      render: (_, record) => (
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <Button 
+            icon={<EditOutlined />} 
+            size="small"
+            onClick={() => openModal(record)} 
+          />
+          <Button 
+            danger 
+            icon={<DeleteOutlined />} 
+            size="small"
+            onClick={() => {
+              setConfirmVisible(true);
+              setItemToDelete(record.id);
+            }} 
+          />
+        </div>
+      ),
+    },
+  ];
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: 40, marginTop: 64 }}>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '400px',
+        marginTop: 64 
+      }}>
         <Spin size="large" />
       </div>
     );
   }
 
   return (
-    <div style={{ marginTop: 64, padding: 16 }}>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ margin: 0 }}>My Notes</h2>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()} loading={submitting}>
-          Add Note
+    <div style={{ 
+      marginTop: 64, 
+      padding: '16px',
+      maxWidth: '100%',
+      overflow: 'hidden'
+    }}>
+      <div style={{ 
+        marginBottom: 16, 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '16px'
+      }}>
+        <h2 style={{ margin: 0, fontSize: 'clamp(18px, 4vw, 24px)' }}>
+          Inventory Management
+        </h2>
+        <Button 
+          type="primary" 
+          icon={<PlusOutlined />} 
+          onClick={() => openModal()}
+          size="middle"
+        >
+          Add Item
         </Button>
       </div>
 
-      <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-        {notes.map(note => (
-          <Card
-            key={note.id}
-            title={note.title}
-            extra={
-              <Space>
-                <Button icon={<EditOutlined />} onClick={() => openModal(note)} loading={submitting} />
-                <Button danger icon={<DeleteOutlined />} onClick={() => {
-                  setConfirmVisible(true);
-                  setNoteToDelete(note.id);
-                }} loading={submitting} />
-              </Space>
-            }
-          >
-            <div style={{ whiteSpace: 'pre-line', marginBottom: 8 }}>
-              {note.content}
-            </div>
-            <small style={{ color: '#666' }}>
-  Last updated: {new Date(note.updatedAt).toLocaleString()}
-</small>
-          </Card>
-        ))}
-      </Space>
+      <Table
+        columns={columns}
+        dataSource={items}
+        rowKey="id"
+        pagination={{ 
+          pageSize: 10,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
+        }}
+        scroll={{ x: 1200 }}
+        size="middle"
+      />
 
+      {/* Delete Confirmation Modal */}
       <Modal
         title="Confirm Delete"
         open={confirmVisible}
-        onOk={() => handleDelete(noteToDelete)}
+        onOk={() => handleDelete(itemToDelete)}
         onCancel={() => {
           setConfirmVisible(false);
-          setNoteToDelete(null);
+          setItemToDelete(null);
         }}
         okText="Delete"
         okButtonProps={{ danger: true, loading: submitting }}
         cancelButtonProps={{ disabled: submitting }}
+        centered
       >
-        <p>Are you sure you want to delete this note?</p>
+        <p>Are you sure you want to delete this inventory item?</p>
       </Modal>
 
+      {/* Add/Edit Item Modal */}
       <Modal
-        title={currentNote ? 'Edit Note' : 'Create Note'}
+        title={currentItem ? 'Edit Item' : 'Add New Item'}
         open={modalVisible}
         onOk={handleSubmit}
         onCancel={() => {
           setModalVisible(false);
-          setCurrentNote(null);
+          setCurrentItem(null);
           form.resetFields();
         }}
-        okText={currentNote ? 'Update' : 'Create'}
+        okText={currentItem ? 'Update' : 'Add Item'}
         okButtonProps={{ loading: submitting }}
         cancelButtonProps={{ disabled: submitting }}
+        width="90%"
+        style={{ maxWidth: '800px' }}
+        centered
       >
-        <Form form={form} layout="vertical">
-          <Form.Item name="title" label="Title" rules={[{ required: true }]}>
-            <Input disabled={submitting} />
-          </Form.Item>
-          <Form.Item name="content" label="Content" rules={[{ required: true }]}>
-            <TextArea rows={4} disabled={submitting} />
-          </Form.Item>
+        <Form 
+          form={form} 
+          layout="vertical"
+          style={{ marginTop: '16px' }}
+        >
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={12}>
+              <Form.Item 
+                name="name" 
+                label="Item Name" 
+                rules={[{ required: true, message: 'Please enter item name' }]}
+              >
+                <Input placeholder="Enter item name" size="middle" />
+              </Form.Item>
+            </Col>
+            
+            <Col xs={24} sm={12}>
+              <Form.Item 
+                name="sku" 
+                label="SKU" 
+                rules={[{ required: true, message: 'SKU is required' }]}
+              >
+                <Input 
+                  placeholder="Random SKU generated" 
+                  size="middle"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={[16, 16]}>
+            <Col xs={24}>
+              <Form.Item name="description" label="Description">
+                <TextArea 
+                  rows={3} 
+                  placeholder="Item description (optional)" 
+                  size="middle"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={12}>
+              <Form.Item 
+                name="category" 
+                label="Category" 
+                rules={[{ required: true, message: 'Please enter category' }]}
+              >
+                <Input placeholder="e.g., Electronics, Clothing" size="middle" />
+              </Form.Item>
+            </Col>
+            
+            <Col xs={24} sm={12}>
+              <Form.Item name="supplier" label="Supplier">
+                <Input placeholder="Supplier name" size="middle" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={8}>
+              <Form.Item 
+                name="quantity" 
+                label="Quantity" 
+                rules={[{ required: true, message: 'Please enter quantity' }]}
+              >
+                <InputNumber 
+                  min={0} 
+                  placeholder="0"
+                  style={{ width: '100%' }}
+                  size="middle"
+                />
+              </Form.Item>
+            </Col>
+            
+            <Col xs={24} sm={8}>
+              <Form.Item 
+                name="unit_price" 
+                label="Unit Price ($)" 
+                rules={[{ required: true, message: 'Please enter unit price' }]}
+              >
+                <InputNumber 
+                  min={0} 
+                  step={0.01} 
+                  placeholder="0.00"
+                  style={{ width: '100%' }}
+                  size="middle"
+                />
+              </Form.Item>
+            </Col>
+            
+            <Col xs={24} sm={8}>
+              <Form.Item 
+                name="min_stock_level" 
+                label="Min Stock Level" 
+                rules={[{ required: true, message: 'Please enter minimum stock level' }]}
+              >
+                <InputNumber 
+                  min={0} 
+                  placeholder="0"
+                  style={{ width: '100%' }}
+                  size="middle"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={[16, 16]}>
+            <Col xs={24}>
+              <Form.Item name="location" label="Storage Location">
+                <Input placeholder="e.g., Warehouse A, Shelf 1" size="middle" />
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Modal>
     </div>

@@ -44,7 +44,7 @@ const Navbar = () => {
         }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <div style={{ color: 'white', marginRight: '20px', fontSize: '18px', fontWeight: 'bold' }}>
-              Notes App
+              inventory App
             </div>
           </div>
           

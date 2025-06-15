@@ -11,7 +11,7 @@ const RegisterPage = () => {
     setLoading(true);
     try {
       // Use HTTPS and ensure the URL matches exactly what's in your CORS config
-      const response = await fetch('https://note-n4cq.vercel.app/auth/register', {
+      const response = await fetch('https://ren-uncw.onrender.com/api/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
